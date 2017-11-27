@@ -48,3 +48,13 @@ receivers:
 > - Send notification to wechat successful at Fri Nov 24 15:55:10 2017
 
 
+使用docker:
+```
+git clone https://github.com/simanchou/prometheus_alert_wechat.git
+cp prom_alert_wechat.conf.sample prom_alert_wechat.conf
+vi prom_alert_wechat.conf    #填写你的corpid,secret,agentid,toparty or user
+docker pull simanchou/prometheus_alert_wechat
+docker run -it -d --name alert_wechat -v "$PWD":/opt/app -w /opt/app -p 5000:5000 simanchou/prometheus_alert_wechat python prometheus_alert_wechat.py
+
+```
+最后记得编辑你的alertmanager的配置文件为web_hook填写正确的URL。
