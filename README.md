@@ -4,18 +4,31 @@
 
 使用方法：
 
+1. 安装
 
 ```
-python3 ./prometheus_alert_wechat.py
+pip install -r requirements.txt
+```
+
+2. 配置
+
+```
+copy prom_alert_wechat.conf.sample prom_alert_wechat.conf
+```
+编辑prom_alert_wechat.conf文件，填入正确的内容。
+
+3. 运行
+```
+python3 ./prometheus_alert_webhook.py
 
 ```
 或者
 
 ```
-python3 ./prometheus_alert_wechat.py --conf yourpath/prom_alert_wechat.conf
+python3 ./prometheus_alert_webhook.py --conf yourpath/prom_webhook.conf
 ```
 
-运行时若不指定配置文件路径，会在脚本所在目录下自动生成prom_alert_wechat.conf文件，请先填写完整配置项再次启动。
+运行时若不指定配置文件路径，默认会在脚本所有目录查找配置文件，若找不到配置文件会在脚本所在目录下自动生成prom_webhook.conf文件，请先填写完整配置项再次启动。
 
 正常启动后，可通过浏览器访问http://yourip:port/path测试web服务，正常情况下会看到如下信息：
 > Current your action is 'GET', it's not allow method. Only 'POST' action is allow.

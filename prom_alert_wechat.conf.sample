@@ -1,0 +1,26 @@
+# 请正确填写如下各项信息，如还没有注册企业微信将无法使用本程序
+# 关于企业微信开发文档请参考http://qydev.weixin.qq.com/wiki/index.php
+# 或自行搜索相关信息
+[weixin]
+# 获取token的url
+token_url = https://qyapi.weixin.qq.com/cgi-bin/gettoken
+# 发送消息的url
+send_msg_url = https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=
+# 企业号中的企业id。
+corpid =
+# 企业号中的应用secret。
+secret =
+# 企业号中的应用id。
+agentid =
+# 企业号中的部门id，群发时使用。
+toparty =
+# 企业号中的用户帐号（消息接收者，多个接收者用‘|’分隔，最多支持1000个）。特殊情况：指定为@all，则向该企业应用的全部成员发送。
+user =
+
+[webserver]
+# 绑定主机IP
+host = 0.0.0.0
+# 监听端口
+port = 5000
+# 用于请求的uri，配置到Alertmanager的配置文件中的web_hook选项
+uri = /alert_to_wechat
