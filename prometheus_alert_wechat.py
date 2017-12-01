@@ -23,17 +23,17 @@ import os
 import configparser
 import sys
 import optparse
+import logging
+
+
+log = logging.getLogger("werkzeug")
+log.setLevel(logging.ERROR)
+
 
 current_path = os.path.split(os.path.realpath(__file__))[0]
 
-parser = optparse.OptionParser()
-parser.add_option('--conf', help='Config file',default='prom_alert_wechat.conf')
-(options, args) = parser.parse_args()
-
-conf_file = options.conf if options.conf else current_path + "/prom_alert_wechat.conf"
-
 app = Flask(__name__)
-app.debug = False
+app.debug = True
 app.config.update(dict(
     SECRET_KEY="no one can guess",
 ))
@@ -70,34 +70,37 @@ port = 5000
 uri = /alert_to_wechat
 """
 
-# 读取程序的配置文件，若文件不存在，则会按变量'conf_template'定义的模板生成配置，请按配置文件项目填写正确内容。
-#conf_file = current_path + "/prom_alert_wechat.conf"
-if os.path.exists(conf_file):
-    cfg = configparser.ConfigParser()
-    cfg.read(conf_file, encoding="utf-8")
-    conf_options = ["token_url", "send_msg_url", "corpid", "secret", "agentid"]
-    for i in conf_options:
-        if cfg.get("weixin", i):
-            pass
-        else:
-            print("you must input your '{}' in  conf file '{}'".format(i, conf_file))
-            exit(1)
-    token_url = cfg.get("weixin", "token_url")
-    send_msg_url = cfg.get("weixin", "send_msg_url")
-    user = cfg.get("weixin", "user")
-    corpid = cfg.get("weixin", "corpid")
-    secret = cfg.get("weixin", "secret")
-    toparty = cfg.get("weixin", "toparty")
-    agentid = cfg.get("weixin", "agentid")
-    host = cfg.get("webserver", "host")
-    port = cfg.get("webserver", "port")
-    uri = cfg.get("webserver", "uri")
-else:
-    with open(conf_file, "w", encoding="utf-8") as f :
-        f.writelines(conf_template)
-    print("conf file '{}' doesn't exist.".format(conf_file))
-    print("create conf template successful,input your info first.")
-    exit(1)
+
+def get_conf():
+    """
+    读取程序的配置文件，若文件不存在，则会按变量'conf_template'定义的模板生成配置，请按配置文件项目填写正确内容。
+    conf_file = current_path + "/prom_alert_wechat.conf"
+    """
+
+    global current_path
+
+    parser = optparse.OptionParser()
+    parser.add_option('--conf', help='Config file', default='prom_alert_wechat.conf')
+    (options, args) = parser.parse_args()
+
+    conf_file = options.conf if options.conf else os.path.join(current_path, "prom_alert_wechat.conf")
+    if os.path.exists(conf_file):
+        cfg = configparser.ConfigParser()
+        cfg.read(conf_file, encoding="utf-8")
+        conf_options = ["token_url", "send_msg_url", "corpid", "secret", "agentid"]
+        for i in conf_options:
+            if cfg.get("weixin", i):
+                pass
+            else:
+                print("you must input your '{}' in  conf file '{}'".format(i, conf_file))
+                exit(1)
+        return cfg
+    else:
+        with open(conf_file, "w", encoding="utf-8") as f:
+            f.writelines(conf_template)
+        print("conf file '{}' doesn't exist.".format(conf_file))
+        print("create conf template successful,input your info first.")
+        exit(1)
 
 
 def get_token_from_weixin():
@@ -105,19 +108,19 @@ def get_token_from_weixin():
     向微信接口请求token
     :return: token
     """
-    global token_url
-    global corpid
-    global secret
+
+    cfg = get_conf()
+
     data = {
-        "corpid": corpid,
-        "corpsecret": secret
+        "corpid": cfg.get("weixin", "corpid"),
+        "corpsecret": cfg.get("weixin", "secret")
     }
-    r = requests.get(url=token_url, params=data, verify=False)
+    r = requests.get(url=cfg.get("weixin", "token_url"), params=data, verify=False)
     token = r.json()["access_token"]
     return token
 
 
-def get_token(tokencachefile=current_path + "/weixin_token_cache.pkl"):
+def get_token(tokencachefile=os.path.join(current_path, "weixin_token_cache.pkl")):
     """
     读取本地缓存文件'weixin_token_cache.pkl'，文件类型为pickle，缓存内容元组(获得token的时间,token内容)
     比较当前时间与缓存的时间，若没超时则使用缓存的token，如已超时则重新获取，并保存本地作为缓存数据。
@@ -125,8 +128,7 @@ def get_token(tokencachefile=current_path + "/weixin_token_cache.pkl"):
     :param tokencachefile: weixin_token_cache.pkl
     :return: token
     """
-    global corpid
-    global secret
+
     if os.path.exists(tokencachefile):
         with open(tokencachefile, "rb") as wtc:
             data = pickle.load(wtc)
@@ -146,7 +148,7 @@ def get_token(tokencachefile=current_path + "/weixin_token_cache.pkl"):
         return token
 
 
-def send_message(token, subject, content):
+def send_message(token, subject, content, severity_level):
     """
     :参数         是否必须   说明
     :touser       否        成员ID列表（消息接收者，多个接收者用‘|’分隔，最多支持1000个）。
@@ -159,24 +161,24 @@ def send_message(token, subject, content):
     :safe         否        表示是否是保密消息，0表示否，1表示是，默认0。
     :return:微信接口返回的消息状态。
     """
-    global user
-    global toparty
-    global agentid
+
+    cfg = get_conf()
+
     data = {
-        "touser": user,
-        "toparty": toparty,
+        "touser": cfg.get("weixin", "user-{}".format(severity_level)),
+        "toparty": cfg.get("weixin", "toparty"),
         "msgtype": "text",
-        "agentid": agentid,
+        "agentid": cfg.get("weixin", "agentid"),
         "text": {
             "content": subject + '\n' + content
         },
         "safe": "0"
     }
-    r = requests.post(url=send_msg_url + token, data=json.dumps(data), verify=False)
+    r = requests.post(url=cfg.get("weixin", "send_msg_url") + token, data=json.dumps(data), verify=False)
     return r.text
 
 
-def content_split(content, fragmentation_len=1800, offset_str="\n\n"):
+def content_split(content, fragmentation_len=1000, offset_str="\n\n"):
     """
     由于企业微信消息发送接口限制单条内容长度为2048字节，因此需对告警内容进行分片，多次发送
     :param content: 告警内容
@@ -198,31 +200,48 @@ def content_split(content, fragmentation_len=1800, offset_str="\n\n"):
     return content_new
 
 
-@app.route("{}".format(uri), methods=["GET", "POST"])
-def index():
+def translateToCN(str, langconf):
+    cfg = get_conf()
+    for i in cfg.options(langconf):
+        if i in str:
+            str = str.replace(i, cfg.get(langconf, i))
+    return str
+
+
+
+@app.route("/alert_to_wechat", methods=["GET", "POST"])
+def alert_to_wechat():
     """
     View Function.
     仅接受POST请求。接受Alertmanager发送过来的数据，分析并发送微信接口。
     """
+
+    cfg = get_conf()
+
     if request.method == "GET":
         print("Not allow method.")
         return "Current your action is 'GET', it's not allow method.\nOnly 'POST' action is allow."
     elif request.method == "POST":
+        #print(request.get_data().decode("utf-8"))
         j_data = json.loads(request.get_data().decode("utf-8"), object_pairs_hook=OrderedDict)
 
-        # debug alert receive interval
-        print("Receive notification from Alertmanager at {}".format(time.asctime()))
-
+        severity_level = request.values.get("severity_level")
         token = get_token()
-        alert_status = j_data["status"]
-        alert_counts = len(j_data["alerts"])
-        subject = "[{}][Count:{}]".format(alert_status.upper(), alert_counts)
+        alert_status = cfg.get("lang-cn", j_data["status"])
+        alert_instance = j_data["alerts"][0]["labels"]["instance"]
+        alert_counts = len(j_data["alerts"] if "alerts" in j_data.keys() else "0")
+        subject = "[{}-数量:{}]".format(alert_status, alert_counts)
+
+        print("Receive notification{} from Alertmanager at {}".format("({}_{}_{})".format(severity_level,alert_status,alert_instance), time.asctime()))
 
         dict_types = (OrderedDict,)
         alert_contents = ""
         # 仅去掉无用内容，不对内容作其它修改，遍历Alertmanager传过来的数据生成字符串作为微信的发送内容。
         for i in j_data["alerts"]:
+            del i["labels"]["instance"]
             del i["generatorURL"]
+            del i["startsAt"]
+            del i["endsAt"]
             l_tmp = ""
             for k, v in i.items():
                 v_tmp = ""
@@ -234,32 +253,36 @@ def index():
                     l_tmp += "{}:{}\n".format(k, v)
             alert_contents += l_tmp + "\n"
 
+        alert_contents = translateToCN(alert_contents, "lang-cn")
+        #print(alert_contents)
+
         # 对告警内容字节长度进行判断，不超过1800直接发送，超过则使用content_split进行分片，然后分片发送。
-        if sys.getsizeof(alert_contents) < 1800:
+        if sys.getsizeof(alert_contents) < 1000:
             content = alert_contents
-            send_status = send_message(token, subject, content)
+            send_status = send_message(token, subject, content, severity_level)
             # 当无法接收消息时，打印微信返回消息检查
             #print(send_status)
             if json.loads(send_status)["errmsg"] == "ok":
-                print("Send notification to wechat successful at {}".format(time.asctime()))
+                print("Send notification{} to wechat successful at {}\n".format("({}_{}_{})".format(severity_level,alert_status,alert_instance),time.asctime()))
             else:
                 print("Send fail, check your api info.")
         else:
             content_list = content_split(alert_contents)
             for content in content_list:
-                send_status = send_message(token, subject, content.strip("\n\n"))
+                send_status = send_message(token, subject, content.strip("\n\n"), severity_level)
                 # 当无法接收消息时，打印微信返回消息检查
                 #print(send_status)
                 if json.loads(send_status)["errmsg"] == "ok":
-                    print("Send notification to wechat successful at {}".format(time.asctime()))
+                    print("Send notification{} to wechat successful at {}\n".format("({}_{}_{})".format(severity_level,alert_status,alert_instance),time.asctime()))
                 else:
                     print("Send fail, check your api info.")
                 time.sleep(1)                           # 发得太快会被微信警告，等待1秒
-                subject = "[Follow by last one...]"     # 修改后继分片的消息标题，使消息看起来更连续
+                subject = "[接上一条...]"     # 修改后继分片的消息标题，使消息看起来更连续
         return "send notify to wechat."
 
 
 if __name__ == "__main__":
+    cfg = get_conf()
     host = cfg.get("webserver", "host")
     port = int(cfg.get("webserver", "port"))
     app.run(host="{}".format(host), port=port)

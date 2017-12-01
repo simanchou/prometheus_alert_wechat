@@ -24,3 +24,19 @@ host = 0.0.0.0
 port = 5000
 # 用于请求的uri，配置到Alertmanager的配置文件中的web_hook选项
 uri = /alert_to_wechat
+
+
+[lang-cn]
+status = 状态
+alertname = 标题
+env = 环境
+group = 分组
+instance = 实例
+job = 采集
+severity = 级别
+description = 描述
+summary = 概要
+firing = 故障了
+resolved = 已恢复
+service = 服务
+host = 主机
