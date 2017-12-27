@@ -228,7 +228,7 @@ def alert_to_wechat():
         severity_level = request.values.get("severity_level")
         token = get_token()
         alert_status = cfg.get("lang-cn", j_data["status"])
-        alert_instance = j_data["alerts"][0]["labels"]["instance"]
+        alert_instance = j_data["alerts"][0]["labels"]["instance"] if "instance" in j_data["alerts"][0]["labels"].keys() else ""
         alert_counts = len(j_data["alerts"] if "alerts" in j_data.keys() else "0")
         subject = "[{}-数量:{}]".format(alert_status, alert_counts)
 
@@ -238,7 +238,8 @@ def alert_to_wechat():
         alert_contents = ""
         # 仅去掉无用内容，不对内容作其它修改，遍历Alertmanager传过来的数据生成字符串作为微信的发送内容。
         for i in j_data["alerts"]:
-            del i["labels"]["instance"]
+            if "instance" in i["labels"].keys():
+                del i["labels"]["instance"]
             del i["generatorURL"]
             del i["startsAt"]
             del i["endsAt"]
