@@ -13,22 +13,23 @@ pip install -r requirements.txt
 2. 配置
 
 ```
-copy prom_alert_wechat.conf.sample prom_alert_wechat.conf
+cp prom_alert_wechat.conf.sample prom_alert_wechat.conf
 ```
 编辑prom_alert_wechat.conf文件，填入正确的内容。
 
-3. 运行
+3. 运行receiver，接收来自alertmanager的消息并存入mq。
 ```
-python3 ./prometheus_alert_webhook.py
+python3 ./receiver.py
 
 ```
-或者
+4. 运行sender,从mq读取告警内容并发送微信。
+```
+python3 ./sender.py
 
 ```
-python3 ./prometheus_alert_webhook.py --conf yourpath/prom_webhook.conf
-```
 
-运行时若不指定配置文件路径，默认会在脚本所有目录查找配置文件，若找不到配置文件会在脚本所在目录下自动生成prom_webhook.conf文件，请先填写完整配置项再次启动。
+
+运行时若不指定配置文件路径，默认会在脚本所有目录查找配置文件，请先填写完整配置项再次启动。
 
 正常启动后，可通过浏览器访问http://yourip:port/path测试web服务，正常情况下会看到如下信息：
 > Current your action is 'GET', it's not allow method. Only 'POST' action is allow.
@@ -43,18 +44,5 @@ receivers:
     - url: http://本程序所在主机IP:端口/alert_to_wechat
 ```
 
-如果有触发了告警，本程序会在终端上打印出如下信息：
-> - Receive notification from Alertmanager at Fri Nov 24 15:55:10 2017
-> - Send notification to wechat successful at Fri Nov 24 15:55:10 2017
+如果有触发了告警，请留意微信消息。
 
-
-使用docker:
-```
-git clone https://github.com/simanchou/prometheus_alert_wechat.git
-cp prom_alert_wechat.conf.sample prom_alert_wechat.conf
-vi prom_alert_wechat.conf    #填写你的corpid,secret,agentid,toparty or user
-docker pull simanchou/prometheus_alert_wechat
-docker run -it -d --name alert_wechat -v "$PWD":/opt/app -w /opt/app -p 5000:5000 simanchou/prometheus_alert_wechat python prometheus_alert_wechat.py
-
-```
-最后记得编辑你的alertmanager的配置文件为web_hook填写正确的URL。
