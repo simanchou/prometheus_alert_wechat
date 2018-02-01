@@ -15,7 +15,21 @@ agentid =
 # 企业号中的部门id，群发时使用。
 toparty =
 # 企业号中的用户帐号（消息接收者，多个接收者用‘|’分隔，最多支持1000个）。特殊情况：指定为@all，则向该企业应用的全部成员发送。
+# 等号左边是自定义的告警级别，右边是该级别对应的接收人员。
+# 如果告警规则中没有定义级别，则默认发送所有成员。
+ALL = @all
+警告 = user1|user2
+中级 = user1|user2|user3|user4|user5
+严重 = user1|user2|user3|user4|user5|user6|user7|user8
+
+
+[mq]
+host = 127.0.0.1
+port = 5672
 user =
+password =
+heartbeat_interval = 300
+
 
 [webserver]
 # 绑定主机IP
@@ -27,6 +41,7 @@ uri = /alert_to_wechat
 
 
 [lang-cn]
+# 如果收到告警消息内容中冒号左边有没翻译的英文，按下面的格式添加即可实现翻译
 status = 状态
 alertname = 标题
 env = 环境
@@ -40,3 +55,4 @@ firing = 故障了
 resolved = 已恢复
 service = 服务
 host = 主机
+device = 网卡
