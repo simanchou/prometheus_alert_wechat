@@ -35,7 +35,7 @@ urllib3.disable_warnings()
 currentPath = os.path.split(os.path.realpath(__file__))[0]
 
 app = Flask(__name__)
-app.debug = True
+app.debug = False
 app.config.update(dict(
     SECRET_KEY="no one can guess",
 ))
@@ -271,7 +271,7 @@ def alert_to_wechat():
         return "Current your action is 'GET', it's not allow method.\nOnly 'POST' action is allow."
     elif request.method == "POST":
         cfg = getConf()
-        print(request.get_data().decode("utf-8"))
+        #print(request.get_data().decode("utf-8"))
         receiveData = request.get_data().decode("utf-8")
         mq = AlertMQ(cfg.get("mq", "user"),
                      cfg.get("mq", "password"),
@@ -288,4 +288,5 @@ if __name__ == "__main__":
     cfg = getConf()
     host = cfg.get("webserver", "host")
     port = int(cfg.get("webserver", "port"))
+    print("Starting program at [{}]".format(time.ctime()))
     app.run(host="{}".format(host), port=port, threaded=True)

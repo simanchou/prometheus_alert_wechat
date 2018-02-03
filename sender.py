@@ -38,15 +38,28 @@ def callback(ch, method, properties, body):
                     alertContents = translateToCN(generateWeChatString(alertList), "lang-cn")
                     if sys.getsizeof(alertContents) < 1000:
                         content = alertContents
-                        sendMessage(token, subject, content, severity)
-                        #print("send to wechat successful")
+                        try:
+                            sendMessage(token, subject, content, severity)
+                        except:
+                            print("Can't connect to Wexin, waiting for 5 seconds.")
+                            time.sleep(5)
+                            sendMessage(token, subject, content, severity)
+                        finally:
+                            print("[{}] Connect to Wexin fail.".format(time.asctime()))
                     else:
                         contentList = contentSplit(alertContents)
                         for content in contentList:
-                            sendMessage(token, subject, content.strip("\n\n"), severity)
-                            time.sleep(1)
-                            subject = "[接上一条...]"
-                        #print("send to wechat successful")
+                            try:
+                                sendMessage(token, subject, content.strip("\n\n"), severity)
+                                time.sleep(1)
+                                subject = "[接上一条...]"
+                            except:
+                                print("Can't connect to Wexin, waiting for 5 seconds.")
+                                time.sleep(5)
+                                sendMessage(token, subject, content.strip("\n\n"), severity)
+                                subject = "[接上一条...]"
+                            finally:
+                                print("[{}] Connect to Wexin fail.".format(time.asctime()))
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 channel.basic_consume(
@@ -54,4 +67,10 @@ channel.basic_consume(
     queue='alert_wechat',
 )
 
-channel.start_consuming()
+if mq.con.is_open:
+    print("Connect to MQ successful,waiting for alert message.")
+    channel.start_consuming()
+else:
+    print("MQ server is running, waiting for 10 seconds.")
+    time.sleep(10)
+    channel.start_consuming()
